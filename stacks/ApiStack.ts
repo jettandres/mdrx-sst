@@ -4,10 +4,18 @@ export default class ApiStack extends sst.Stack {
   constructor(scope: sst.App, id: string, props?: sst.StackProps) {
     super(scope, id, props)
 
+    const lambda = new sst.Function(this, "ComputeExpenseReportLambda", {
+      handler: "src/computeExpenseReport.handler",
+      environment: {
+        GRAPHQL_URL: process.env.GRAPHQL_URL,
+        HASURA_SECRET: process.env.HASURA_SECRET,
+      },
+    })
+
     // Create a HTTP API
     const api = new sst.Api(this, "Api", {
       routes: {
-        "POST /v1/compute-expense-report": "src/computeExpenseReport.handler",
+        "POST /v1/compute-expense-report": lambda,
       },
     })
 
