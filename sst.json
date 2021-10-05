@@ -1,0 +1,5 @@
+{
+  "name": "mdrx-sst",
+  "region": "us-east-2",
+  "main": "stacks/index.ts"
+}
