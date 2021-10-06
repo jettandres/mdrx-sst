@@ -1,17 +1,26 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
 import axios from "axios"
+import { Dinero, add } from "dinero.js"
 
-const QUERY_RECEIPTS = `
-  query Receipts($expenseReportId: uuid!){
-    receipts(where:{expense_report_id: {_eq: $expenseReportId}}){
+const QUERY_EXPENSE = `
+  query Expense($expenseReportId:uuid!){
+    expense(where:{receipts: {expense_report_id: {_eq: $expenseReportId}}}) {
       id
-      amount
-      expense {
-        name
+      name
+      receipts {
+        amount
       }
     }
   }
 `
+
+type Expense = {
+  id: string
+  name: string
+  receipts: {
+    amount: Dinero<number>
+  }[]
+}
 
 const GRAPHQL_URL = process.env.GRAPHQL_URL as string
 
@@ -24,7 +33,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     body.event.data.old.expense_report_id
 
   const response = await axios.post(GRAPHQL_URL, {
-    query: QUERY_RECEIPTS,
+    query: QUERY_EXPENSE,
     variables: {
       expenseReportId,
     },
@@ -33,8 +42,22 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     },
   })
 
-  const receipts = response.data.data.receipts
-  console.log("receipts", receipts)
+  const expenses = response.data.data.expense as Array<Expense>
+
+  const summary = expenses.map((e: Expense) => {
+    const month = e.receipts
+      .map((r) => r.amount)
+      .reduce((prev, next) => add(prev, next))
+    const computed = {
+      ...e,
+      total: {
+        month,
+      },
+    }
+    return computed
+  })
+
+  console.log("expense", summary[0].total.month)
 
   return {
     statusCode: 200,
