@@ -1,6 +1,10 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
-import axios from "axios"
 import { add, dinero, toUnit } from "dinero.js"
+import { PHP } from "@dinero.js/currencies"
+
+import client from "./utils/gql/client"
+
+import type { DineroOptions } from "dinero.js"
 
 const QUERY_EXPENSE = `
   query Expense($expenseReportId:uuid!){
@@ -30,11 +34,23 @@ type Expense = {
   id: string
   name: string
   receipts: {
-    amount: any
+    amount: DineroOptions<number>
   }[]
 }
 
-const GRAPHQL_URL = process.env.GRAPHQL_URL as string
+type QueryExpenseResponse = {
+  expense: Array<Expense>
+}
+
+type QueryExpensePayload = {
+  expenseReportId: string
+}
+
+type QueryExpenseYtdPayload = {
+  reportStatus: "DRAFT" | "SUBMITTED"
+  since?: string
+  expenseIds: Array<string>
+}
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
@@ -45,34 +61,29 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     body.event.data.old.expense_report_id
 
   // TODO: refactor axios into gql client that'll accept query and variable as payload with default GRAPHQL_URL and headers
-  const response = await axios.post(GRAPHQL_URL, {
-    query: QUERY_EXPENSE,
-    variables: {
-      expenseReportId,
-    },
-    headers: {
-      "x-hasura-admin-secret": process.env.HASURA_SECRET,
-    },
+  const {
+    data: { expense },
+  } = await client<QueryExpenseResponse, QueryExpensePayload>(QUERY_EXPENSE, {
+    expenseReportId,
   })
 
-  const expenses = response.data.data.expense as Array<Expense>
+  const expenses = expense
   const expenseIds = expenses.map((e) => e.id)
 
   console.log("expenseIds", expenseIds)
 
-  const responseYtd = await axios.post(GRAPHQL_URL, {
-    query: QUERY_EXPENSE_YTD,
-    variables: {
+  const {
+    data: { expense: expenseYtd },
+  } = await client<QueryExpenseResponse, QueryExpenseYtdPayload>(
+    QUERY_EXPENSE_YTD,
+    {
       reportStatus: "DRAFT",
       expenseIds,
       // TODO: add $since param
-    },
-    headers: {
-      "x-hasura-admin-secret": process.env.HASURA_SECRET,
-    },
-  })
+    }
+  )
 
-  const expensesYtd = responseYtd.data.data.expense as Array<Expense>
+  const expensesYtd = expenseYtd
   const computedYtd = expensesYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
@@ -92,7 +103,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next))
 
-    const ytd = computedYtd.find((y) => y.id === e.id)!.total.year
+    const ytd =
+      computedYtd.find((y) => y.id === e.id)?.total.year ??
+      dinero({ amount: 0, currency: PHP })
     const computed = {
       ...e,
       total: {
