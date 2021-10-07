@@ -15,6 +15,10 @@ async function client<T, T2>(
     },
   })
 
+  if (response.data.errors) {
+    console.log("gql error", response.data.errors)
+  }
+
   return response.data
 }
 

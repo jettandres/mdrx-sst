@@ -1,4 +1,5 @@
-import type Expense from "../../types/expense"
+import type Expense from "../../types/Expense"
+import type ExpenseReportSummary from "../../types/ExpenseReportSummary"
 
 const QUERY_EXPENSE = `
   query Expense($expenseReportId:uuid!){
@@ -34,8 +35,35 @@ type QueryExpensePayload = {
 
 type QueryExpenseYtdPayload = {
   reportStatus: "DRAFT" | "SUBMITTED"
-  since: string
+  since?: string
   expenseIds: Array<string>
+}
+
+const MUTATION_UPSERT_EXPENSE_REPORT_SUMMARY = `
+  mutation UpsertExpenseReportSummary($payload: expense_report_summary_insert_input!) {
+    expenseReportSummary: insert_expense_report_summary_one(object: $payload, on_conflict: {constraint: expense_report_summary_pkey, update_columns: [data, updated_at]}) {
+      createdAt: created_at
+      updatedAt: updated_at
+      expenseReportId: expense_report_id
+      data
+    }
+  }
+`
+
+type MutationUpsertExpenseReportSummaryResponse = {
+  expenseReportSummary: {
+    createdAt: string
+    updatedAt: string
+    expenseReportId: string
+    data: Array<ExpenseReportSummary>
+  }
+}
+
+type MutationUpsertExpenseReportSummaryPayload = {
+  payload: {
+    expense_report_id: string
+    data: Array<ExpenseReportSummary>
+  }
 }
 
 export {
@@ -44,4 +72,7 @@ export {
   QueryExpenseResponse,
   QueryExpensePayload,
   QueryExpenseYtdPayload,
+  MUTATION_UPSERT_EXPENSE_REPORT_SUMMARY,
+  MutationUpsertExpenseReportSummaryResponse,
+  MutationUpsertExpenseReportSummaryPayload,
 }
