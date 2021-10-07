@@ -60,7 +60,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     body.event.data.new.expense_report_id ||
     body.event.data.old.expense_report_id
 
-  // TODO: refactor axios into gql client that'll accept query and variable as payload with default GRAPHQL_URL and headers
   const {
     data: { expense },
   } = await client<QueryExpenseResponse, QueryExpensePayload>(QUERY_EXPENSE, {
@@ -69,8 +68,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   const expenses = expense
   const expenseIds = expenses.map((e) => e.id)
-
-  console.log("expenseIds", expenseIds)
 
   const {
     data: { expense: expenseYtd },
