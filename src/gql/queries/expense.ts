@@ -34,7 +34,7 @@ type QueryExpensePayload = {
 
 type QueryExpenseYtdPayload = {
   reportStatus: "DRAFT" | "SUBMITTED"
-  since?: string
+  since: string
   expenseIds: Array<string>
 }
 

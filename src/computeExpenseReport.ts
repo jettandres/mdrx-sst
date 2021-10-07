@@ -1,5 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
 
+import { DateTime } from "luxon"
 import { add, dinero, toUnit } from "dinero.js"
 import { PHP } from "@dinero.js/currencies"
 
@@ -30,15 +31,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   const expenses = expense
   const expenseIds = expenses.map((e) => e.id)
+  const since = DateTime.now().startOf("year").toUTC().toSQL()
 
   const {
     data: { expense: expenseYtd },
   } = await client<QueryExpenseResponse, QueryExpenseYtdPayload>(
     QUERY_EXPENSE_YTD,
     {
-      reportStatus: "DRAFT",
+      reportStatus: "DRAFT", // TODO; update to SUBMITTED for accuracy in computation
       expenseIds,
-      // TODO: add $since param
+      since,
     }
   )
 
