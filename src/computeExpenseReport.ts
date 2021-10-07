@@ -1,56 +1,18 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
+
 import { add, dinero, toUnit } from "dinero.js"
 import { PHP } from "@dinero.js/currencies"
 
-import client from "./utils/gql/client"
+import client from "./gql/client"
+import {
+  QUERY_EXPENSE,
+  QUERY_EXPENSE_YTD,
+  QueryExpenseResponse,
+  QueryExpensePayload,
+  QueryExpenseYtdPayload,
+} from "./gql/queries/expense"
 
-import type { DineroOptions } from "dinero.js"
-
-const QUERY_EXPENSE = `
-  query Expense($expenseReportId:uuid!){
-    expense(where:{receipts: {expense_report_id: {_eq: $expenseReportId}}}) {
-      id
-      name
-      receipts {
-        amount
-      }
-    }
-  }
-`
-
-const QUERY_EXPENSE_YTD = `
-  query ExpenseYearToDate($reportStatus: report_status_enum!, $since: timestamp, $expenseIds: [uuid!]) {
-    expense(where: {id: {_in: $expenseIds}, receipts: {expense_report: {status: {_eq: $reportStatus}, submitted_at: {_gte: $since}}}}) {
-      id
-      name
-      receipts {
-	amount
-      }
-    }
-  }
-`
-
-type Expense = {
-  id: string
-  name: string
-  receipts: {
-    amount: DineroOptions<number>
-  }[]
-}
-
-type QueryExpenseResponse = {
-  expense: Array<Expense>
-}
-
-type QueryExpensePayload = {
-  expenseReportId: string
-}
-
-type QueryExpenseYtdPayload = {
-  reportStatus: "DRAFT" | "SUBMITTED"
-  since?: string
-  expenseIds: Array<string>
-}
+import type Expense from "./types/expense"
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
