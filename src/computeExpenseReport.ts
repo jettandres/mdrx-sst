@@ -13,7 +13,8 @@ import {
   QueryExpenseYtdPayload,
 } from "./gql/queries/expense"
 
-import type Expense from "./types/expense"
+import type Expense from "./types/Expense"
+import type ExpenseReportSummary from "./types/ExpenseReportSummary"
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
@@ -59,7 +60,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     return computed
   })
 
-  const summary = expenses.map((e: Expense) => {
+  const summary: Array<ExpenseReportSummary> = expenses.map((e: Expense) => {
     const month = e.receipts
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next))
@@ -67,14 +68,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     const ytd =
       computedYtd.find((y) => y.id === e.id)?.total.year ??
       dinero({ amount: 0, currency: PHP })
-    const computed = {
+
+    const computed: unknown = {
       ...e,
       total: {
         month,
         ytd,
       },
     }
-    return computed
+
+    return computed as ExpenseReportSummary
   })
 
   console.log("monthly", toUnit(summary[0].total.month))
