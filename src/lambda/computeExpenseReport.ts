@@ -3,7 +3,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
 import { add, dinero } from "dinero.js"
 import { PHP } from "@dinero.js/currencies"
 
-import client from "./gql/client"
+import client from "../gql/client"
 import {
   QUERY_EXPENSE,
   QUERY_EXPENSE_YTD,
@@ -13,10 +13,10 @@ import {
   MUTATION_UPSERT_EXPENSE_REPORT_SUMMARY,
   MutationUpsertExpenseReportSummaryResponse,
   MutationUpsertExpenseReportSummaryPayload,
-} from "./gql/queries/expense"
+} from "../gql/queries/expense"
 
-import type Expense from "./types/Expense"
-import type ExpenseReportSummary from "./types/ExpenseReportSummary"
+import type Expense from "../types/Expense"
+import type ExpenseReportSummary from "../types/ExpenseReportSummary"
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2

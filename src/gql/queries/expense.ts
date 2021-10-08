@@ -7,6 +7,9 @@ const QUERY_EXPENSE = `
       id
       name
       receipts {
+        id
+        supplier
+        imageUrl: image_url
         amount
       }
     }
