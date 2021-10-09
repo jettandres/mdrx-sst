@@ -1,4 +1,4 @@
-import type { DineroOptions } from "dinero.js"
+import type { DineroSnapshot } from "dinero.js"
 
 type Expense = {
   id: string
@@ -13,7 +13,7 @@ type Expense = {
       streetBrgy: string
     }
     imageUrl?: string
-    amount: DineroOptions<number>
+    amount: DineroSnapshot<number>
   }[]
 }
 

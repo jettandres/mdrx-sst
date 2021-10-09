@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
 
-import { add, dinero } from "dinero.js"
-import { PHP } from "@dinero.js/currencies"
+import { add, dinero, toSnapshot } from "dinero.js"
+import type { DineroSnapshot, Dinero } from "dinero.js"
 
 import client from "../gql/client"
 import {
@@ -10,21 +10,48 @@ import {
   QueryExpenseResponse,
   QueryExpensePayload,
   QueryExpenseYtdPayload,
-  MUTATION_UPSERT_EXPENSE_REPORT_SUMMARY,
-  MutationUpsertExpenseReportSummaryResponse,
-  MutationUpsertExpenseReportSummaryPayload,
 } from "../gql/queries/expense"
 
 import type Expense from "../types/Expense"
-import type ExpenseReportSummary from "../types/ExpenseReportSummary"
+
+type Sections = {
+  title: {
+    label: string
+    total: DineroSnapshot<number>
+  }
+  data: Array<SectionData>
+}
+
+type SectionData = {
+  id: string
+  supplierName: string
+  supplierTin: string
+  netAmount: DineroSnapshot<number>
+  kmReading?: number
+}
+
+type YearToDateData = {
+  id: string
+  name: string
+  amount: DineroSnapshot<number>
+}
+
+type ReportFooter = {
+  totalReplenishable: DineroSnapshot<number>
+  yearToDate: Array<YearToDateData>
+  totalYearToDate: DineroSnapshot<number>
+}
+
+type Response = {
+  reportBody: Array<Sections>
+  reportFooter: ReportFooter
+}
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
 ) => {
   const body = JSON.parse(event.body ?? "")
-  const expenseReportId: string =
-    body.event.data.new.expense_report_id ||
-    body.event.data.old.expense_report_id
+  const expenseReportId: string = body.expenseReportId
 
   const {
     data: { expense },
@@ -47,57 +74,66 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     }
   )
 
-  const computedYtd = expenseYtd.map((e: Expense) => {
+  const computedYtd: Array<YearToDateData> = expenseYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next))
 
-    const computed = {
-      ...e,
-      total: {
-        year,
-      },
+    const computed: YearToDateData = {
+      id: e.id,
+      name: e.name,
+      amount: toSnapshot(year),
     }
     return computed
   })
 
-  const summary: Array<ExpenseReportSummary> = expenses.map((e: Expense) => {
+  const reportBody: Array<Sections> = expenses.map((e: Expense) => {
     const month = e.receipts
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next))
 
-    const ytd =
-      computedYtd.find((y) => y.id === e.id)?.total.year ??
-      dinero({ amount: 0, currency: PHP })
+    const data: Array<SectionData> = e.receipts.map((r) => {
+      const sectionData: SectionData = {
+        id: r.id as string,
+        supplierName: r.supplier?.name as string,
+        supplierTin: r.supplier?.tin as string,
+        netAmount: r.amount,
+      }
+      return sectionData
+    })
 
-    const computed: unknown = {
-      ...e,
-      total: {
-        month,
-        ytd,
+    const computed: Sections = {
+      title: {
+        label: e.name,
+        total: toSnapshot(month),
       },
+      data: data,
     }
 
-    return computed as ExpenseReportSummary
+    return computed
   })
 
-  const { data } = await client<
-    MutationUpsertExpenseReportSummaryResponse,
-    MutationUpsertExpenseReportSummaryPayload
-  >(MUTATION_UPSERT_EXPENSE_REPORT_SUMMARY, {
-    payload: {
-      expense_report_id: expenseReportId,
-      data: summary,
-    },
-  })
+  const totalReplenishable: Dinero<number> = reportBody
+    .map((s: Sections) => dinero(s.title.total))
+    .reduce((prev, next) => add(prev, next))
 
-  console.log("expense report summary", data)
+  const totalYearToDate: Dinero<number> = computedYtd
+    .map((cytd) => dinero(cytd.amount))
+    .reduce((prev, next) => add(prev, next))
 
+  const reportFooter: ReportFooter = {
+    totalReplenishable: toSnapshot(totalReplenishable),
+    yearToDate: computedYtd,
+    totalYearToDate: toSnapshot(totalYearToDate),
+  }
+
+  const response: Response = {
+    reportBody,
+    reportFooter,
+  }
   return {
     statusCode: 200,
     headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify({
-      data: summary,
-    }),
+    body: JSON.stringify(response),
   }
 }
