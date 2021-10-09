@@ -19,7 +19,7 @@ export default class ApiStack extends sst.Stack {
     // Create a HTTP API
     const api = new sst.Api(this, "Api", {
       routes: {
-        "POST /v1/compute-expense-report": computeExpenseReport,
+        "GET /v1/compute-expense-report": computeExpenseReport,
       },
     })
 

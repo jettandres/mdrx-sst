@@ -10,6 +10,8 @@ import {
   QueryExpenseResponse,
   QueryExpensePayload,
   QueryExpenseYtdPayload,
+  QueryExpenseReportResponse,
+  QUERY_EXPENSE_REPORT,
 } from "../gql/queries/expense"
 
 import type Expense from "../types/Expense"
@@ -42,7 +44,12 @@ type ReportFooter = {
   totalYearToDate: DineroSnapshot<number>
 }
 
+type ReportHeader = {
+  createdAt: string
+}
+
 type Response = {
+  reportHeader: ReportHeader
   reportBody: Array<Sections>
   reportFooter: ReportFooter
 }
@@ -50,8 +57,18 @@ type Response = {
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
 ) => {
-  const body = JSON.parse(event.body ?? "")
-  const expenseReportId: string = body.expenseReportId
+  const expenseReportId: string = event.queryStringParameters?.id as string
+
+  const {
+    data: {
+      expenseReport: { createdAt },
+    },
+  } = await client<QueryExpenseReportResponse, QueryExpensePayload>(
+    QUERY_EXPENSE_REPORT,
+    {
+      expenseReportId,
+    }
+  )
 
   const {
     data: { expense },
@@ -127,7 +144,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     totalYearToDate: toSnapshot(totalYearToDate),
   }
 
+  const reportHeader: ReportHeader = {
+    createdAt,
+  }
+
   const response: Response = {
+    reportHeader,
     reportBody,
     reportFooter,
   }
