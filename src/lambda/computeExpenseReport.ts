@@ -131,6 +131,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     reportBody,
     reportFooter,
   }
+
   return {
     statusCode: 200,
     headers: { "Content-Type": "text/plain" },
