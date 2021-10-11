@@ -5,7 +5,7 @@ const QUERY_EXPENSE = `
     expense(where:{receipts: {expense_report_id: {_eq: $expenseReportId}}}) {
       id
       name
-      receipts {
+      receipts (where: {expense_report_id: {_eq: $expenseReportId }}) {
         id
         supplier
         imageUrl: image_url
