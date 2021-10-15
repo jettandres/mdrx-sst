@@ -1,9 +1,9 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda"
+import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
 
-import { add, dinero, toSnapshot } from "dinero.js"
-import type { DineroSnapshot, Dinero } from "dinero.js"
+import { add, dinero, toSnapshot } from 'dinero.js'
+import type { DineroSnapshot, Dinero } from 'dinero.js'
 
-import client from "../gql/client"
+import client from '../gql/client'
 import {
   QUERY_EXPENSE,
   QUERY_EXPENSE_YTD,
@@ -12,9 +12,12 @@ import {
   QueryExpenseYtdPayload,
   QueryExpenseReportResponse,
   QUERY_EXPENSE_REPORT,
-} from "../gql/queries/expense"
+  QueryExpenseReportKmReadingResponse,
+  QUERY_EXPENSE_REPORT_KM_READING,
+} from '../gql/queries/expense'
 
-import type Expense from "../types/Expense"
+import type Expense from '../types/Expense'
+import { PHP } from '@dinero.js/currencies'
 
 type Sections = {
   title: {
@@ -42,6 +45,8 @@ type ReportFooter = {
   totalReplenishable: DineroSnapshot<number>
   yearToDate: Array<YearToDateData>
   totalYearToDate: DineroSnapshot<number>
+  totalLitersAdded: number
+  avgKmPerLiter?: string
 }
 
 type ReportHeader = {
@@ -53,6 +58,8 @@ type Response = {
   reportBody: Array<Sections>
   reportFooter: ReportFooter
 }
+
+const defaultDinero = dinero({ amount: 0, currency: PHP })
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
@@ -85,16 +92,25 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   } = await client<QueryExpenseResponse, QueryExpenseYtdPayload>(
     QUERY_EXPENSE_YTD,
     {
-      reportStatus: "DRAFT", // TODO; update to SUBMITTED for accuracy in computation
+      reportStatus: 'DRAFT', // TODO; update to SUBMITTED for accuracy in computation
       expenseIds,
       // TODO: add $since var once we have submitted expense reports
+    }
+  )
+
+  const {
+    data: { kmReadings },
+  } = await client<QueryExpenseReportKmReadingResponse, QueryExpensePayload>(
+    QUERY_EXPENSE_REPORT_KM_READING,
+    {
+      expenseReportId,
     }
   )
 
   const computedYtd: Array<YearToDateData> = expenseYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
-      .reduce((prev, next) => add(prev, next))
+      .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const computed: YearToDateData = {
       id: e.id,
@@ -107,7 +123,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   const reportBody: Array<Sections> = expenses.map((e: Expense) => {
     const month = e.receipts
       .map((r) => dinero(r.amount))
-      .reduce((prev, next) => add(prev, next))
+      .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const data: Array<SectionData> = e.receipts.map((r) => {
       const sectionData: SectionData = {
@@ -132,16 +148,22 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   const totalReplenishable: Dinero<number> = reportBody
     .map((s: Sections) => dinero(s.title.total))
-    .reduce((prev, next) => add(prev, next))
+    .reduce((prev, next) => add(prev, next), defaultDinero)
 
   const totalYearToDate: Dinero<number> = computedYtd
     .map((cytd) => dinero(cytd.amount))
-    .reduce((prev, next) => add(prev, next))
+    .reduce((prev, next) => add(prev, next), defaultDinero)
+
+  const totalLitersAdded = kmReadings
+    .map((v) => v.litersAdded)
+    .reduce((prev, next) => prev + next, 0)
+  // TODO: use another lambda for computing current km consumed
 
   const reportFooter: ReportFooter = {
     totalReplenishable: toSnapshot(totalReplenishable),
     yearToDate: computedYtd,
     totalYearToDate: toSnapshot(totalYearToDate),
+    totalLitersAdded,
   }
 
   const reportHeader: ReportHeader = {
@@ -156,7 +178,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   return {
     statusCode: 200,
-    headers: { "Content-Type": "text/plain" },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(response),
   }
 }

@@ -1,4 +1,5 @@
 import type Expense from "../../types/Expense"
+import KmReading from "../../types/KmReading"
 
 const QUERY_EXPENSE = `
   query Expense($expenseReportId:uuid!){
@@ -36,6 +37,16 @@ const QUERY_EXPENSE_REPORT = `
   }
 `
 
+const QUERY_EXPENSE_REPORT_KM_READING = `
+  query ReportKmReading($expenseReportId: uuid!) {
+    kmReadings: expense_report_km_reading(where: {expense_report_id: {_eq: $expenseReportId}}){
+      receiptId: receipt_id
+      litersAdded: liters_added
+      kmReading: km_reading
+    }
+  }
+`
+
 type QueryExpenseResponse = {
   expense: Array<Expense>
 }
@@ -57,12 +68,18 @@ type QueryExpenseReportResponse = {
   }
 }
 
+type QueryExpenseReportKmReadingResponse = {
+  kmReadings: Array<KmReading>
+}
+
 export {
   QUERY_EXPENSE,
   QUERY_EXPENSE_YTD,
   QUERY_EXPENSE_REPORT,
+  QUERY_EXPENSE_REPORT_KM_READING,
   QueryExpenseResponse,
   QueryExpensePayload,
   QueryExpenseYtdPayload,
   QueryExpenseReportResponse,
+  QueryExpenseReportKmReadingResponse,
 }
