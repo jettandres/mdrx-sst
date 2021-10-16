@@ -80,17 +80,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   )
 
   const {
-    data: { expense },
+    data: { expenses },
   } = await client<QueryExpenseResponse, QueryExpensePayload>(QUERY_EXPENSE, {
     expenseReportId,
   })
 
-  const expenses = expense
   const expenseIds = expenses.map((e) => e.id)
   //const since = DateTime.now().startOf("year").toUTC().toSQL()
 
   const {
-    data: { expense: expenseYtd },
+    data: { expenses: expensesYtd },
   } = await client<QueryExpenseResponse, QueryExpenseYtdPayload>(
     QUERY_EXPENSE_YTD,
     {
@@ -122,7 +121,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     { expenseReportId }
   )
 
-  const computedYtd: Array<YearToDateData> = expenseYtd.map((e: Expense) => {
+  const computedYtd: Array<YearToDateData> = expensesYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next), defaultDinero)
@@ -146,6 +145,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
         supplierName: r.supplier?.name as string,
         supplierTin: r.supplier?.tin as string,
         netAmount: r.amount,
+        kmReading: r.kmReading?.value,
       }
       return sectionData
     })

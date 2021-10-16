@@ -4,7 +4,7 @@ import KmReadingConsumed from '../../types/KmReadingConsumed'
 
 const QUERY_EXPENSE = `
   query Expense($expenseReportId:uuid!){
-    expense(where:{receipts: {expense_report_id: {_eq: $expenseReportId}}}) {
+    expenses: expense(where:{receipts: {expense_report_id: {_eq: $expenseReportId}}}) {
       id
       name
       receipts (where: {expense_report_id: {_eq: $expenseReportId }}) {
@@ -12,6 +12,9 @@ const QUERY_EXPENSE = `
         supplier
         imageUrl: image_url
         amount
+        kmReading: expense_report_km_reading{
+          value: km_reading
+        }
       }
     }
   }
@@ -19,7 +22,7 @@ const QUERY_EXPENSE = `
 
 const QUERY_EXPENSE_YTD = `
   query ExpenseYearToDate($reportStatus: report_status_enum!, $since: timestamp, $expenseIds: [uuid!]) {
-    expense(where: {id: {_in: $expenseIds}, receipts: {expense_report: {status: {_eq: $reportStatus}, submitted_at: {_gte: $since}}}}) {
+    expenses: expense(where: {id: {_in: $expenseIds}, receipts: {expense_report: {status: {_eq: $reportStatus}, submitted_at: {_gte: $since}}}}) {
       id
       name
       receipts {
@@ -84,7 +87,7 @@ const QUERY_AVG_KM_CONSUMPTION = `
 `
 
 type QueryExpenseResponse = {
-  expense: Array<Expense>
+  expenses: Array<Expense>
 }
 
 type QueryExpensePayload = {
