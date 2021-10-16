@@ -24,10 +24,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     }
   )
 
-  console.log('data', kmReadings)
-
   const currentKmReading = kmReadings[0].kmReading
-  const prevKmReading = kmReadings[1].kmReading
+  const prevKmReading = kmReadings[1].kmReading ?? 0
 
   const currentKmConsumed = currentKmReading - prevKmReading
   console.log('currentKmConsumed', currentKmConsumed)
