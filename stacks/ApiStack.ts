@@ -1,4 +1,4 @@
-import * as sst from "@serverless-stack/resources"
+import * as sst from '@serverless-stack/resources'
 
 export default class ApiStack extends sst.Stack {
   constructor(scope: sst.App, id: string, props?: sst.StackProps) {
@@ -6,9 +6,21 @@ export default class ApiStack extends sst.Stack {
 
     const computeExpenseReport = new sst.Function(
       this,
-      "ComputeExpenseReportLambda",
+      'ComputeExpenseReportLambda',
       {
-        handler: "src/lambda/computeExpenseReport.handler",
+        handler: 'src/lambda/computeExpenseReport.handler',
+        environment: {
+          GRAPHQL_URL: process.env.GRAPHQL_URL,
+          HASURA_SECRET: process.env.HASURA_SECRET,
+        },
+      }
+    )
+
+    const computeCurrentKmConsumed = new sst.Function(
+      this,
+      'ComputeCurrentKmConsumed',
+      {
+        handler: 'src/lambda/computeCurrentKmConsumed.handler',
         environment: {
           GRAPHQL_URL: process.env.GRAPHQL_URL,
           HASURA_SECRET: process.env.HASURA_SECRET,
@@ -17,15 +29,17 @@ export default class ApiStack extends sst.Stack {
     )
 
     // Create a HTTP API
-    const api = new sst.Api(this, "Api", {
+    const api = new sst.Api(this, 'Api', {
       routes: {
-        "GET /v1/compute-expense-report": computeExpenseReport,
+        'GET /v1/compute-expense-report': computeExpenseReport,
+        'POST /v1/compute-current-km-consumed': computeCurrentKmConsumed,
       },
     })
 
     // Show the endpoint in the output
     this.addOutputs({
-      ApiEndpoint: `${api.url}/v1/compute-expense-report`,
+      computeExpenseReport: `${api.url}/v1/compute-expense-report`,
+      computeCurrentKmConsumed: `${api.url}/v1/compute-current-km-consumed`,
     })
   }
 }

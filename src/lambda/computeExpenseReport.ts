@@ -14,6 +14,8 @@ import {
   QUERY_EXPENSE_REPORT,
   QueryExpenseReportKmReadingResponse,
   QUERY_EXPENSE_REPORT_KM_READING,
+  QueryAvgKmConsumptionResponse,
+  QUERY_AVG_KM_CONSUMPTION,
 } from '../gql/queries/expense'
 
 import type Expense from '../types/Expense'
@@ -46,7 +48,7 @@ type ReportFooter = {
   yearToDate: Array<YearToDateData>
   totalYearToDate: DineroSnapshot<number>
   totalLitersAdded: number
-  avgKmPerLiter?: string
+  avgKmPerLiter: string
 }
 
 type ReportHeader = {
@@ -107,6 +109,19 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     }
   )
 
+  const {
+    data: {
+      expense_report_km_reading_aggregate: {
+        aggregate: {
+          avg: { km_consumed: avgKmConsumed },
+        },
+      },
+    },
+  } = await client<QueryAvgKmConsumptionResponse, QueryExpensePayload>(
+    QUERY_AVG_KM_CONSUMPTION,
+    { expenseReportId }
+  )
+
   const computedYtd: Array<YearToDateData> = expenseYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
@@ -157,13 +172,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   const totalLitersAdded = kmReadings
     .map((v) => v.litersAdded)
     .reduce((prev, next) => prev + next, 0)
-  // TODO: use another lambda for computing current km consumed
+
+  const avgKmPerLiter = `${avgKmConsumed ?? 0}km/liter`
 
   const reportFooter: ReportFooter = {
     totalReplenishable: toSnapshot(totalReplenishable),
     yearToDate: computedYtd,
     totalYearToDate: toSnapshot(totalYearToDate),
     totalLitersAdded,
+    avgKmPerLiter,
   }
 
   const reportHeader: ReportHeader = {
@@ -178,7 +195,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'text/plain' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(response),
   }
 }

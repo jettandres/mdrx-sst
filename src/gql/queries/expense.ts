@@ -1,5 +1,6 @@
-import type Expense from "../../types/Expense"
-import KmReading from "../../types/KmReading"
+import type Expense from '../../types/Expense'
+import KmReading from '../../types/KmReading'
+import KmReadingConsumed from '../../types/KmReadingConsumed'
 
 const QUERY_EXPENSE = `
   query Expense($expenseReportId:uuid!){
@@ -47,6 +48,41 @@ const QUERY_EXPENSE_REPORT_KM_READING = `
   }
 `
 
+const QUERY_LAST_TWO_KM_READING = `
+  query LastTwoKmReading($expenseReportId: uuid!) {
+    kmReadings: expense_report_km_reading(where: {expense_report_id: {_eq: $expenseReportId}}, order_by: {created_at: desc}, limit: 2) {
+      receiptId: receipt_id
+      createdAt: created_at
+      kmReading: km_reading
+      kmConsumed: km_consumed
+    }
+  }
+`
+
+const MUTATION_UPDATE_KM_CONSUMED = `
+  mutation UpdateKmConsumed($receiptId: uuid!, $kmConsumed: numeric) {
+    update_expense_report_km_reading(where: {receipt_id: {_eq: $receiptId}}, _set: {km_consumed: $kmConsumed}) {
+      affected_rows
+      returning {
+        receipt_id
+        km_consumed
+      }
+    }
+  }
+`
+
+const QUERY_AVG_KM_CONSUMPTION = `
+  query AvgKmConsumption($expenseReportId: uuid!) {
+    expense_report_km_reading_aggregate(where: {expense_report_id: {_eq: $expenseReportId}}) {
+      aggregate {
+        avg {
+          km_consumed
+        }
+      }
+    }
+  }
+`
+
 type QueryExpenseResponse = {
   expense: Array<Expense>
 }
@@ -56,7 +92,7 @@ type QueryExpensePayload = {
 }
 
 type QueryExpenseYtdPayload = {
-  reportStatus: "DRAFT" | "SUBMITTED"
+  reportStatus: 'DRAFT' | 'SUBMITTED'
   since?: string
   expenseIds: Array<string>
 }
@@ -72,14 +108,50 @@ type QueryExpenseReportKmReadingResponse = {
   kmReadings: Array<KmReading>
 }
 
+type QueryLastTwoKmReadingResponse = {
+  kmReadings: Array<KmReadingConsumed>
+}
+
+type MutationUpdateKmConsumedPayload = {
+  receiptId: string
+  kmConsumed: number
+}
+
+type MutationUpdateKmConsumedResponse = {
+  update_expense_report_km_reading: {
+    affected_rows: number
+    returning: {
+      receipt_id: string
+      km_consumed: string
+    }[]
+  }
+}
+
+type QueryAvgKmConsumptionResponse = {
+  expense_report_km_reading_aggregate: {
+    aggregate: {
+      avg: {
+        km_consumed: number
+      }
+    }
+  }
+}
+
 export {
   QUERY_EXPENSE,
   QUERY_EXPENSE_YTD,
   QUERY_EXPENSE_REPORT,
   QUERY_EXPENSE_REPORT_KM_READING,
+  QUERY_LAST_TWO_KM_READING,
+  QUERY_AVG_KM_CONSUMPTION,
+  MUTATION_UPDATE_KM_CONSUMED,
   QueryExpenseResponse,
   QueryExpensePayload,
   QueryExpenseYtdPayload,
   QueryExpenseReportResponse,
   QueryExpenseReportKmReadingResponse,
+  QueryLastTwoKmReadingResponse,
+  QueryAvgKmConsumptionResponse,
+  MutationUpdateKmConsumedPayload,
+  MutationUpdateKmConsumedResponse,
 }
