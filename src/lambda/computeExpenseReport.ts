@@ -166,9 +166,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     .map((o) => o.litersAdded)
     .reduce((prev, next) => prev + next)
 
-  const avgKmPerLiter = `${
+  const avgKmPerLiter = `${(
     totalKmReadingConsumption / totalLitersAdded
-  }km/liter`
+  ).toFixed(2)}km/liter`
 
   const reportFooter: ReportFooter = {
     totalReplenishable: toSnapshot(totalReplenishable),
