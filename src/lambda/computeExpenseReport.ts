@@ -175,9 +175,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
   const firstKmReading = sortedKmReadings[0]
   const lastKmReading = sortedKmReadings[kmReadings.length - 1]
-  const totalKmReadingConsumption = lastKmReading - firstKmReading
 
-  const avgKmPerLiter = `${avgKmConsumed ?? 0}km/liter`
+  const totalKmReadingConsumption = lastKmReading - firstKmReading
+  const totalLitersAdded = kmReadings
+    .map((o) => o.litersAdded)
+    .reduce((prev, next) => prev + next)
+
+  const avgKmPerLiter = `${
+    totalKmReadingConsumption / totalLitersAdded
+  }km/liter`
 
   const reportFooter: ReportFooter = {
     totalReplenishable: toSnapshot(totalReplenishable),
