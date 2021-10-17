@@ -47,7 +47,7 @@ type ReportFooter = {
   totalReplenishable: DineroSnapshot<number>
   yearToDate: Array<YearToDateData>
   totalYearToDate: DineroSnapshot<number>
-  totalLitersAdded: number
+  totalKmReadingConsumption: number
   avgKmPerLiter: string
 }
 
@@ -169,9 +169,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     .map((cytd) => dinero(cytd.amount))
     .reduce((prev, next) => add(prev, next), defaultDinero)
 
-  const totalLitersAdded = kmReadings
-    .map((v) => v.litersAdded)
-    .reduce((prev, next) => prev + next, 0)
+  const sortedKmReadings = kmReadings
+    .map((v) => v.kmReading)
+    .sort((a, b) => a - b)
+
+  const firstKmReading = sortedKmReadings[0]
+  const lastKmReading = sortedKmReadings[kmReadings.length - 1]
+  const totalKmReadingConsumption = lastKmReading - firstKmReading
 
   const avgKmPerLiter = `${avgKmConsumed ?? 0}km/liter`
 
@@ -179,7 +183,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     totalReplenishable: toSnapshot(totalReplenishable),
     yearToDate: computedYtd,
     totalYearToDate: toSnapshot(totalYearToDate),
-    totalLitersAdded,
+    totalKmReadingConsumption,
     avgKmPerLiter,
   }
 
