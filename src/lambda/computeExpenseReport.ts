@@ -14,8 +14,6 @@ import {
   QUERY_EXPENSE_REPORT,
   QueryExpenseReportKmReadingResponse,
   QUERY_EXPENSE_REPORT_KM_READING,
-  QueryAvgKmConsumptionResponse,
-  QUERY_AVG_KM_CONSUMPTION,
 } from '../gql/queries/expense'
 
 import type Expense from '../types/Expense'
@@ -106,19 +104,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     {
       expenseReportId,
     }
-  )
-
-  const {
-    data: {
-      expense_report_km_reading_aggregate: {
-        aggregate: {
-          avg: { km_consumed: avgKmConsumed },
-        },
-      },
-    },
-  } = await client<QueryAvgKmConsumptionResponse, QueryExpensePayload>(
-    QUERY_AVG_KM_CONSUMPTION,
-    { expenseReportId }
   )
 
   const computedYtd: Array<YearToDateData> = expensesYtd.map((e: Expense) => {

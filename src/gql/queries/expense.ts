@@ -74,18 +74,6 @@ const MUTATION_UPDATE_KM_CONSUMED = `
   }
 `
 
-const QUERY_AVG_KM_CONSUMPTION = `
-  query AvgKmConsumption($expenseReportId: uuid!) {
-    expense_report_km_reading_aggregate(where: {expense_report_id: {_eq: $expenseReportId}}) {
-      aggregate {
-        avg {
-          km_consumed
-        }
-      }
-    }
-  }
-`
-
 type QueryExpenseResponse = {
   expenses: Array<Expense>
 }
@@ -130,23 +118,12 @@ type MutationUpdateKmConsumedResponse = {
   }
 }
 
-type QueryAvgKmConsumptionResponse = {
-  expense_report_km_reading_aggregate: {
-    aggregate: {
-      avg: {
-        km_consumed: number
-      }
-    }
-  }
-}
-
 export {
   QUERY_EXPENSE,
   QUERY_EXPENSE_YTD,
   QUERY_EXPENSE_REPORT,
   QUERY_EXPENSE_REPORT_KM_READING,
   QUERY_LAST_TWO_KM_READING,
-  QUERY_AVG_KM_CONSUMPTION,
   MUTATION_UPDATE_KM_CONSUMED,
   QueryExpenseResponse,
   QueryExpensePayload,
@@ -154,7 +131,6 @@ export {
   QueryExpenseReportResponse,
   QueryExpenseReportKmReadingResponse,
   QueryLastTwoKmReadingResponse,
-  QueryAvgKmConsumptionResponse,
   MutationUpdateKmConsumedPayload,
   MutationUpdateKmConsumedResponse,
 }
