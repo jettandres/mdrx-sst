@@ -1,6 +1,7 @@
 import ApiStack from './ApiStack'
 import StorageStack from './StorageStack'
 import * as sst from '@serverless-stack/resources'
+import AuthStack from './AuthStack'
 
 export default function main(app: sst.App): void {
   // Set default runtime for all functions
@@ -9,7 +10,9 @@ export default function main(app: sst.App): void {
   })
 
   const storageStack = new StorageStack(app, 'storage')
-
-  // Add more stacks
-  new ApiStack(app, 'api-stack', { storage: storageStack })
+  const apiStack = new ApiStack(app, 'api')
+  new AuthStack(app, 'auth', {
+    api: apiStack.api,
+    bucket: storageStack.bucket,
+  })
 }
