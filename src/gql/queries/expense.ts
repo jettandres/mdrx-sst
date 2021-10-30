@@ -10,7 +10,7 @@ const QUERY_EXPENSE = `
       receipts (where: {expense_report_id: {_eq: $expenseReportId }}) {
         id
         supplier
-        imageUrl: image_url
+        imageKey: image_key
         amount
         kmReading: expense_report_km_reading{
           value: km_reading

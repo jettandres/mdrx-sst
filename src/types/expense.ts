@@ -12,7 +12,7 @@ type Expense = {
       address: string
       streetBrgy: string
     }
-    imageUrl?: string
+    imageKey: string
     amount: DineroSnapshot<number>
     kmReading?: {
       value: number

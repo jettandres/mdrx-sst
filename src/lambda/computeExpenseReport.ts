@@ -33,6 +33,7 @@ type SectionData = {
   supplierTin: string
   netAmount: DineroSnapshot<number>
   kmReading?: number
+  imageKey: string
 }
 
 type YearToDateData = {
@@ -131,6 +132,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
         supplierTin: r.supplier?.tin as string,
         netAmount: r.amount,
         kmReading: r.kmReading?.value,
+        imageKey: r.imageKey,
       }
       return sectionData
     })
