@@ -26,7 +26,6 @@ export default class AuthStack extends sst.Stack {
       api,
       new iam.PolicyStatement({
         actions: ['s3:*'],
-        sid: 'PublidReadGetObject', // TODO: correct this
         effect: iam.Effect.ALLOW,
         resources: [
           bucket.bucketArn + '/private/${cognito-identity.amazonaws.com:sub}/*',
