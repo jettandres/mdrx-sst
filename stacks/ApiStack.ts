@@ -1,9 +1,13 @@
 import * as sst from '@serverless-stack/resources'
 
+type Props = sst.StackProps & {
+  bucket: sst.Bucket
+}
+
 export default class ApiStack extends sst.Stack {
   api: sst.Api
 
-  constructor(scope: sst.App, id: string, props?: sst.StackProps) {
+  constructor(scope: sst.App, id: string, props?: Props) {
     super(scope, id, props)
 
     const computeExpenseReport = new sst.Function(
@@ -18,16 +22,28 @@ export default class ApiStack extends sst.Stack {
       }
     )
 
+    const deleteS3Image = new sst.Function(this, 'DeleteS3ImageLambda', {
+      handler: 'src/lambda/deleteS3Image.handler',
+      environment: {
+        region: this.region,
+        bucketName: props.bucket.s3Bucket.bucketName,
+        awsAccessKey: process.env.AWS_ACCESS_KEY_ID,
+        awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    })
+
     // Create a HTTP API
     this.api = new sst.Api(this, 'Api', {
       routes: {
         'GET /v1/compute-expense-report': computeExpenseReport,
+        'POST /v1/delete-s3-image': deleteS3Image,
       },
     })
 
     // Show the endpoint in the output
     this.addOutputs({
-      computeExpenseReport: `${this.api.url}/v1/compute-expense-report`,
+      computeExpenseReport: `GET ${this.api.url}/v1/compute-expense-report`,
+      deleteS3Image: `POST ${this.api.url}/v1/delete-s3-image`,
     })
   }
 }

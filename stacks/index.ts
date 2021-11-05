@@ -10,7 +10,8 @@ export default function main(app: sst.App): void {
   })
 
   const storageStack = new StorageStack(app, 'storage')
-  const apiStack = new ApiStack(app, 'api')
+  const apiStack = new ApiStack(app, 'api', { bucket: storageStack.bucket })
+
   new AuthStack(app, 'auth', {
     api: apiStack.api,
     bucket: storageStack.bucket,
