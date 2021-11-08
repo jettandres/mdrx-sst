@@ -15,15 +15,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     },
   })
 
-  console.log('region', process.env.region)
-  console.log('bucketName', process.env.bucketName)
-  console.log('accessKeyId', process.env.awsAccessKey as string)
-  console.log('secretAccessKey', process.env.awsSecretAccessKey as string)
-
   const hasuraEvent = JSON.parse(event.body as string) as HasuraEvent
   const receipt = hasuraEvent.event.data.old as Receipt
-
-  console.log('imageKey', receipt.image_key)
 
   const deleteCommand = new DeleteObjectCommand({
     Key: receipt.image_key,
@@ -31,18 +24,24 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   })
 
   try {
-    const data = await client.send(deleteCommand)
-    console.log('delete res', data)
+    await client.send(deleteCommand)
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        success: true,
+        imageKey: receipt.image_key,
+      }),
+    }
   } catch (error) {
-    console.log('delete error', error)
-  }
-
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      success: true,
-      imageKey: receipt.image_key,
-    }),
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        success: false,
+        imageKey: receipt.image_key,
+        error: JSON.stringify(error),
+      }),
+    }
   }
 }
