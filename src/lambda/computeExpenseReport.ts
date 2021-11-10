@@ -160,16 +160,18 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     .map((v) => v.kmReading)
     .sort((a, b) => a - b)
 
-  const firstKmReading = sortedKmReadings[0]
-  const lastKmReading = sortedKmReadings[kmReadings.length - 1]
+  const firstKmReading = sortedKmReadings[0] ?? 0
+  const lastKmReading = sortedKmReadings[kmReadings.length - 1] ?? 0
 
   const totalKmReadingConsumption = lastKmReading - firstKmReading
   const totalLitersAdded = kmReadings
     .map((o) => o.litersAdded)
-    .reduce((prev, next) => prev + next)
+    .reduce((prev, next) => prev + next, 0)
 
-  const avgKmPerLiter = `${(
-    totalKmReadingConsumption / totalLitersAdded
+  const hasTotalKmAndLiters = !!totalKmReadingConsumption && !!totalLitersAdded
+  const avgKmPerLiter = `${(hasTotalKmAndLiters
+    ? totalKmReadingConsumption / totalLitersAdded
+    : 0
   ).toFixed(2)}km/liter`
 
   const reportFooter: ReportFooter = {
