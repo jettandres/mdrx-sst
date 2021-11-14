@@ -119,6 +119,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   const computedYtd: Array<YearToDateData> = expensesYtd.map((e: Expense) => {
     const year = e.receipts
       .map((r) => dinero(r.amount))
+      .map((d) => toUnit(d) / 1.12)
+      .map((n) => n.toFixed(2))
+      .map((s) => parseFloat(s))
+      .map((f) => dineroFromFloat({ amount: f, currency: PHP, scale: 2 }))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const computed: YearToDateData = {
