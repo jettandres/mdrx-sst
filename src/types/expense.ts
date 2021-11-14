@@ -16,6 +16,7 @@ type Expense = {
     amount: DineroSnapshot<number>
     kmReading?: {
       value: number
+      litersAdded: number
     }
   }[]
 }

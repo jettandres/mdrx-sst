@@ -14,6 +14,7 @@ const QUERY_EXPENSE = `
         amount
         kmReading: expense_report_km_reading{
           value: km_reading
+          litersAdded: liters_added
         }
       }
     }
