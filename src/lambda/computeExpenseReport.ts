@@ -23,7 +23,11 @@ import dineroFromFloat from '../utils/dineroFromFloat'
 type Sections = {
   title: {
     label: string
-    total: DineroSnapshot<number>
+    total: {
+      netAmount: DineroSnapshot<number>
+      vatAmount: DineroSnapshot<number>
+      grossAmount: DineroSnapshot<number>
+    }
     itemCount: number
   }
   data: Array<SectionData>
@@ -126,8 +130,23 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   })
 
   const reportBody: Array<Sections> = expenses.map((e: Expense) => {
-    const month = e.receipts
+    const monthlyGross = e.receipts
       .map((r) => dinero(r.amount))
+      .reduce((prev, next) => add(prev, next), defaultDinero)
+
+    const netReceipts = e.receipts
+      .map((r) => toUnit(dinero(r.amount)) / 1.12)
+      .map((n) => n.toFixed(2))
+      .map((s) => parseFloat(s))
+      .map((f) => dineroFromFloat({ amount: f, currency: PHP, scale: 2 }))
+
+    const monthlyNet = netReceipts.reduce(
+      (prev, next) => add(prev, next),
+      defaultDinero
+    )
+
+    const monthlyVat = netReceipts
+      .map((r) => multiply(r, { amount: 12, scale: 2 }))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const data: Array<SectionData> = e.receipts.map((r) => {
@@ -159,7 +178,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     const computed: Sections = {
       title: {
         label: e.name,
-        total: toSnapshot(month),
+        total: {
+          grossAmount: toSnapshot(monthlyGross),
+          netAmount: toSnapshot(monthlyNet),
+          vatAmount: toSnapshot(monthlyVat),
+        },
         itemCount: data.length,
       },
       data: data,
@@ -169,7 +192,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   })
 
   const totalReplenishable: Dinero<number> = reportBody
-    .map((s: Sections) => dinero(s.title.total))
+    .map((s: Sections) => dinero(s.title.total.netAmount))
     .reduce((prev, next) => add(prev, next), defaultDinero)
 
   const totalYearToDate: Dinero<number> = computedYtd
