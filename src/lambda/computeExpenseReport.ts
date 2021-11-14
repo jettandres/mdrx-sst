@@ -52,7 +52,11 @@ type YearToDateData = {
 }
 
 type ReportFooter = {
-  totalReplenishable: DineroSnapshot<number>
+  totalReplenishable: {
+    netAmount: DineroSnapshot<number>
+    grossAmount: DineroSnapshot<number>
+    vatAmount: DineroSnapshot<number>
+  }
   yearToDate: Array<YearToDateData>
   totalYearToDate: DineroSnapshot<number>
   totalKmReadingConsumption: number
@@ -189,9 +193,22 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     return computed
   })
 
-  const totalReplenishable: Dinero<number> = reportBody
+  const totalReplenishableGross: Dinero<number> = reportBody
     .map((s: Sections) => dinero(s.title.total.netAmount))
     .reduce((prev, next) => add(prev, next), defaultDinero)
+
+  const floatTotalReplenishableNet = parseFloat(
+    (toUnit(totalReplenishableGross) / 1.12).toFixed(2)
+  )
+  const totalReplenishableNet = dineroFromFloat({
+    amount: floatTotalReplenishableNet,
+    currency: PHP,
+    scale: 2,
+  })
+  const totalReplenishableVat = multiply(totalReplenishableNet, {
+    amount: 12,
+    scale: 2,
+  })
 
   const totalYearToDate: Dinero<number> = computedYtd
     .map((cytd) => dinero(cytd.amount))
@@ -216,7 +233,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   ).toFixed(2)}km/liter`
 
   const reportFooter: ReportFooter = {
-    totalReplenishable: toSnapshot(totalReplenishable),
+    totalReplenishable: {
+      grossAmount: toSnapshot(totalReplenishableGross),
+      netAmount: toSnapshot(totalReplenishableNet),
+      vatAmount: toSnapshot(totalReplenishableVat),
+    },
     yearToDate: computedYtd,
     totalYearToDate: toSnapshot(totalYearToDate),
     totalKmReadingConsumption,
