@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
 
-import { add, dinero, toSnapshot } from 'dinero.js'
+import { add, dinero, toSnapshot, toUnit, multiply } from 'dinero.js'
 import type { DineroSnapshot, Dinero } from 'dinero.js'
 
 import client from '../gql/client'
@@ -18,6 +18,7 @@ import {
 
 import type Expense from '../types/Expense'
 import { PHP } from '@dinero.js/currencies'
+import dineroFromFloat from '../utils/dineroFromFloat'
 
 type Sections = {
   title: {
@@ -33,6 +34,8 @@ type SectionData = {
   supplierName: string
   supplierTin: string
   netAmount: DineroSnapshot<number>
+  vatAmount: DineroSnapshot<number>
+  grossAmount: DineroSnapshot<number>
   imageKey: string
   kmReading?: number
   litersAdded?: number
@@ -128,14 +131,27 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const data: Array<SectionData> = e.receipts.map((r) => {
+      const net = toUnit(dinero(r.amount)) / 1.12
+      const netFloat = parseFloat(net.toFixed(2))
+
+      const netDinero = dineroFromFloat({
+        amount: netFloat,
+        currency: PHP,
+        scale: 2,
+      })
+
+      const vatDinero = multiply(netDinero, { amount: 12, scale: 2 })
+
       const sectionData: SectionData = {
         id: r.id as string,
         supplierName: r.supplier?.name as string,
         supplierTin: r.supplier?.tin as string,
-        netAmount: r.amount,
         imageKey: r.imageKey,
         kmReading: r.kmReading?.value,
         litersAdded: r.kmReading?.litersAdded,
+        grossAmount: r.amount,
+        netAmount: toSnapshot(netDinero),
+        vatAmount: toSnapshot(vatDinero),
       }
       return sectionData
     })
