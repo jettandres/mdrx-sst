@@ -23,6 +23,7 @@ type Sections = {
   title: {
     label: string
     total: DineroSnapshot<number>
+    itemCount: number
   }
   data: Array<SectionData>
 }
@@ -141,6 +142,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       title: {
         label: e.name,
         total: toSnapshot(month),
+        itemCount: data.length,
       },
       data: data,
     }
