@@ -134,20 +134,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
-    const netReceipts = e.receipts
-      .map((r) => toUnit(dinero(r.amount)) / 1.12)
-      .map((n) => n.toFixed(2))
-      .map((s) => parseFloat(s))
-      .map((f) => dineroFromFloat({ amount: f, currency: PHP, scale: 2 }))
+    const shortNet = parseFloat((toUnit(monthlyGross) / 1.12).toFixed(2))
+    const monthlyNet = dineroFromFloat({
+      amount: shortNet,
+      currency: PHP,
+      scale: 2,
+    })
 
-    const monthlyNet = netReceipts.reduce(
-      (prev, next) => add(prev, next),
-      defaultDinero
-    )
-
-    const monthlyVat = netReceipts
-      .map((r) => multiply(r, { amount: 12, scale: 2 }))
-      .reduce((prev, next) => add(prev, next), defaultDinero)
+    const monthlyVat = multiply(monthlyNet, { amount: 12, scale: 2 })
 
     const data: Array<SectionData> = e.receipts.map((r) => {
       const net = toUnit(dinero(r.amount)) / 1.12
