@@ -18,6 +18,7 @@ type Expense = {
       value: number
       litersAdded: number
     }
+    vatable: boolean
   }[]
 }
 

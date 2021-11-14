@@ -16,6 +16,7 @@ const QUERY_EXPENSE = `
           value: km_reading
           litersAdded: liters_added
         }
+        vatable
       }
     }
   }
@@ -28,6 +29,7 @@ const QUERY_EXPENSE_YTD = `
       name
       receipts {
 	amount
+        vatable
       }
     }
   }
