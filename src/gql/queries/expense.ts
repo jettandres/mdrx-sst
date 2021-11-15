@@ -17,6 +17,8 @@ const QUERY_EXPENSE = `
           litersAdded: liters_added
         }
         vatable
+        net
+        vat
       }
     }
   }
@@ -30,6 +32,8 @@ const QUERY_EXPENSE_YTD = `
       receipts {
 	amount
         vatable
+        net
+        vat
       }
     }
   }

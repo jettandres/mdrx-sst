@@ -19,6 +19,8 @@ type Expense = {
       litersAdded: number
     }
     vatable: boolean
+    net: DineroSnapshot<number>
+    vat: DineroSnapshot<number>
   }[]
 }
 

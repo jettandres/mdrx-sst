@@ -142,48 +142,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       .map((r) => dinero(r.amount))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
-    const monthlyGrossNonVatable = e.receipts
-      .filter((r) => !r.vatable)
-      .map((r) => dinero(r.amount))
+    const monthlyNet = e.receipts
+      .map((r) => dinero(r.net))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
-    const monthlyGrossVatable = e.receipts
-      .filter((r) => r.vatable)
-      .map((r) => dinero(r.amount))
+    const monthlyVat = e.receipts
+      .map((r) => dinero(r.vat))
       .reduce((prev, next) => add(prev, next), defaultDinero)
-
-    const hasMonthlyVatable = e.receipts.find((r) => r.vatable)
-
-    const shortNet = parseFloat((toUnit(monthlyGrossVatable) / 1.12).toFixed(2))
-    const netDinero = dineroFromFloat({
-      amount: shortNet,
-      currency: PHP,
-      scale: 2,
-    })
-
-    const monthlyNet = add(
-      dineroFromFloat({
-        amount: shortNet,
-        currency: PHP,
-        scale: 2,
-      }),
-      monthlyGrossNonVatable
-    )
-
-    const monthlyVat = multiply(netDinero, { amount: 12, scale: 2 })
 
     const data: Array<SectionData> = e.receipts.map((r) => {
-      const net = toUnit(dinero(r.amount)) / 1.12
-      const netFloat = parseFloat(net.toFixed(2))
-
-      const netDinero = dineroFromFloat({
-        amount: netFloat,
-        currency: PHP,
-        scale: 2,
-      })
-
-      const vatDinero = multiply(netDinero, { amount: 12, scale: 2 })
-
       const sectionData: SectionData = {
         id: r.id as string,
         supplierName: r.supplier?.name as string,
@@ -192,10 +159,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (
         kmReading: r.kmReading?.value,
         litersAdded: r.kmReading?.litersAdded,
         grossAmount: r.amount,
-        netAmount: r.vatable ? toSnapshot(netDinero) : r.amount,
-        vatAmount: r.vatable
-          ? toSnapshot(vatDinero)
-          : toSnapshot(defaultDinero),
+        netAmount: r.net,
+        vatAmount: r.vat,
       }
       return sectionData
     })
@@ -205,12 +170,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (
         label: e.name,
         total: {
           grossAmount: toSnapshot(monthlyGross),
-          netAmount: hasMonthlyVatable
-            ? toSnapshot(monthlyNet)
-            : toSnapshot(monthlyGross),
-          vatAmount: hasMonthlyVatable
-            ? toSnapshot(monthlyVat)
-            : toSnapshot(defaultDinero),
+          netAmount: toSnapshot(monthlyNet),
+          vatAmount: toSnapshot(monthlyVat),
         },
         itemCount: data.length,
       },
