@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
 
-import { add, dinero, toSnapshot, toUnit, multiply } from 'dinero.js'
+import { add, dinero, toSnapshot } from 'dinero.js'
 import type { DineroSnapshot, Dinero } from 'dinero.js'
 
 import client from '../gql/client'
@@ -18,7 +18,6 @@ import {
 
 import type Expense from '../types/Expense'
 import { PHP } from '@dinero.js/currencies'
-import dineroFromFloat from '../utils/dineroFromFloat'
 
 type Sections = {
   title: {
