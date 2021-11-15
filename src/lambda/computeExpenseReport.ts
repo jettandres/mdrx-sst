@@ -47,7 +47,9 @@ type SectionData = {
 type YearToDateData = {
   id: string
   name: string
-  amount: DineroSnapshot<number>
+  gross: DineroSnapshot<number>
+  net: DineroSnapshot<number>
+  vat: DineroSnapshot<number>
 }
 
 type ReportFooter = {
@@ -57,7 +59,11 @@ type ReportFooter = {
     vatAmount: DineroSnapshot<number>
   }
   yearToDate: Array<YearToDateData>
-  totalYearToDate: DineroSnapshot<number>
+  totalYearToDate: {
+    netAmount: DineroSnapshot<number>
+    grossAmount: DineroSnapshot<number>
+    vatAmount: DineroSnapshot<number>
+  }
   totalKmReadingConsumption: number
   avgKmPerLiter: string
 }
@@ -120,14 +126,24 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   )
 
   const computedYtd: Array<YearToDateData> = expensesYtd.map((e: Expense) => {
-    const year = e.receipts
+    const gross = e.receipts
       .map((r) => dinero(r.amount))
+      .reduce((prev, next) => add(prev, next), defaultDinero)
+
+    const net = e.receipts
+      .map((r) => dinero(r.net))
+      .reduce((prev, next) => add(prev, next), defaultDinero)
+
+    const vat = e.receipts
+      .map((r) => dinero(r.vat))
       .reduce((prev, next) => add(prev, next), defaultDinero)
 
     const computed: YearToDateData = {
       id: e.id,
       name: e.name,
-      amount: toSnapshot(year),
+      gross: toSnapshot(gross),
+      net: toSnapshot(net),
+      vat: toSnapshot(vat),
     }
     return computed
   })
@@ -188,8 +204,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     .map((s: Sections) => dinero(s.title.total.vatAmount))
     .reduce((prev, next) => add(prev, next), defaultDinero)
 
-  const totalYearToDate: Dinero<number> = computedYtd
-    .map((cytd) => dinero(cytd.amount))
+  const totalYearToDateGross: Dinero<number> = computedYtd
+    .map((cytd) => dinero(cytd.gross))
+    .reduce((prev, next) => add(prev, next), defaultDinero)
+
+  const totalYearToDateVat: Dinero<number> = computedYtd
+    .map((cytd) => dinero(cytd.vat))
+    .reduce((prev, next) => add(prev, next), defaultDinero)
+
+  const totalYearToDateNet: Dinero<number> = computedYtd
+    .map((cytd) => dinero(cytd.net))
     .reduce((prev, next) => add(prev, next), defaultDinero)
 
   const sortedKmReadings = kmReadings
@@ -217,7 +241,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       vatAmount: toSnapshot(totalReplenishableVat),
     },
     yearToDate: computedYtd,
-    totalYearToDate: toSnapshot(totalYearToDate),
+    totalYearToDate: {
+      grossAmount: toSnapshot(totalYearToDateGross),
+      netAmount: toSnapshot(totalYearToDateNet),
+      vatAmount: toSnapshot(totalYearToDateVat),
+    },
     totalKmReadingConsumption,
     avgKmPerLiter,
   }
