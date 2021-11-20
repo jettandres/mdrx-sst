@@ -19,6 +19,10 @@ export default class AuthStack extends sst.Stack {
         userPool: {
           signInAliases: { email: true },
         },
+        triggers: {
+          preTokenGeneration: 'src/lambda/claimJwt.handler',
+          //postAuthentication //TODO: connect lambda later
+        },
       },
     })
 
