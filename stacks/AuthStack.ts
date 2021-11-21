@@ -19,9 +19,15 @@ export default class AuthStack extends sst.Stack {
         userPool: {
           signInAliases: { email: true },
         },
+        defaultFunctionProps: {
+          environment: {
+            GRAPHQL_URL: process.env.GRAPHQL_URL,
+            HASURA_SECRET: process.env.HASURA_SECRET,
+          },
+        },
         triggers: {
           preTokenGeneration: 'src/lambda/claimJwt.handler',
-          //postAuthentication //TODO: connect lambda later
+          postAuthentication: 'src/lambda/syncAuthUser.handler',
         },
       },
     })
