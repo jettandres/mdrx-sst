@@ -21,6 +21,7 @@
     "@dinero.js/currencies": "^2.0.0-alpha.8",
     "@serverless-stack/cli": "0.45.0",
     "@serverless-stack/resources": "0.45.0",
+    "aws-jwt-verify": "^1.0.3",
     "axios": "^0.21.4",
     "dinero.js": "^2.0.0-alpha.8",
     "luxon": "^2.0.2"
