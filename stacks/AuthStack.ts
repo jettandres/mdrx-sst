@@ -26,7 +26,6 @@ export default class AuthStack extends sst.Stack {
           },
         },
         triggers: {
-          preTokenGeneration: 'src/lambda/claimJwt.handler',
           postAuthentication: 'src/lambda/syncAuthUser.handler',
         },
       },
