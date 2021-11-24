@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios from 'axios'
 
 async function client<T, T2>(
   query: string,
@@ -7,16 +7,21 @@ async function client<T, T2>(
   const GRAPHQL_URL = process.env.GRAPHQL_URL as string
   const HASURA_SECRET = process.env.HASURA_SECRET as string
 
-  const response = await axios.post(GRAPHQL_URL, {
-    query,
-    variables,
-    headers: {
-      "x-hasura-admin-secret": HASURA_SECRET,
+  const response = await axios.post(
+    GRAPHQL_URL,
+    {
+      query,
+      variables,
     },
-  })
+    {
+      headers: {
+        'x-hasura-admin-secret': HASURA_SECRET,
+      },
+    }
+  )
 
   if (response.data.errors) {
-    console.log("gql error", response.data.errors)
+    console.log('gql error', response.data.errors)
   }
 
   return response.data
