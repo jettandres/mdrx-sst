@@ -12,7 +12,8 @@
   "devDependencies": {
     "@aws-cdk/assert": "1.132.0",
     "@types/aws-lambda": "^8.10.85",
-    "@types/luxon": "^2.0.7"
+    "@types/luxon": "^2.0.7",
+    "@types/node": "^16.11.10"
   },
   "dependencies": {
     "@aws-cdk/aws-iam": "1.132.0",
