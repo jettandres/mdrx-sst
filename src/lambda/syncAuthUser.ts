@@ -10,11 +10,13 @@ export const handler = async (event: any, context: any, callback: any) => {
   const userId = event.userName
   const contactNumber = event.request.userAttributes.phone_number
   const email = event.request.userAttributes.email
+  const name = event.request.userAttributes?.name
 
   const employee = {
     id: userId,
     email: email,
     contact_number: contactNumber,
+    name,
   }
 
   const {
