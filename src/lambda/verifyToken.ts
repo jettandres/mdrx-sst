@@ -22,8 +22,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   const token = event.headers.authorization as string
   try {
     const payload = await verifier.verify(token)
-    console.log('verified!', payload)
-
     const userId = payload?.sub as string
 
     const {
@@ -32,8 +30,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       QUERY_EMPLOYEE_DETAILS,
       { id: userId }
     )
-
-    console.log('queried hasura user!', employee)
 
     return {
       statusCode: 200,
