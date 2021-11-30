@@ -1,5 +1,11 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from 'aws-lambda'
 import { CognitoJwtVerifier } from 'aws-jwt-verify'
+import client from '../gql/client'
+import {
+  QueryEmployeeDetailsPayload,
+  QueryEmployeeDetailsResponse,
+  QUERY_EMPLOYEE_DETAILS,
+} from '../gql/queries/employees'
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2
@@ -14,22 +20,37 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   })
 
   const token = event.headers.authorization as string
-  console.log('headers', event)
-
   try {
     const payload = await verifier.verify(token)
     console.log('verified!', payload)
+
+    const userId = payload?.sub as string
+
+    const {
+      data: { employee },
+    } = await client<QueryEmployeeDetailsResponse, QueryEmployeeDetailsPayload>(
+      QUERY_EMPLOYEE_DETAILS,
+      { id: userId }
+    )
+
+    console.log('queried hasura user!', employee)
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        'X-Hasura-User-Id': userId,
+        'X-Hasura-Role': employee.hasuraRole,
+      }),
+    }
   } catch (e) {
     console.log('token not valid', e)
-  }
-
-  // TODO: have a column check for custodian_assignment, area, and hasura role
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      'X-Hasura-User-Id': '6969',
-      'X-Hasura-Role': 'admin',
-    }),
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: e,
+      }),
+    }
   }
 }
