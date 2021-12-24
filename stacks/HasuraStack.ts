@@ -7,19 +7,24 @@ import {
   Port,
   Protocol,
   SubnetType,
+  SecurityGroup,
+  Peer,
 } from '@aws-cdk/aws-ec2'
 import { PublicHostedZone } from '@aws-cdk/aws-route53'
 import {
+  Credentials,
   DatabaseInstance,
   DatabaseInstanceEngine,
-  DatabaseSecret,
+  PostgresEngineVersion,
 } from '@aws-cdk/aws-rds'
-import { RemovalPolicy } from '@aws-cdk/core'
+import { RemovalPolicy, CfnOutput } from '@aws-cdk/core'
 import { ApplicationLoadBalancedFargateService } from '@aws-cdk/aws-ecs-patterns'
 
 import { Certificates } from './CertificatesStack'
 import { ContainerImage, Secret as ECSecret } from '@aws-cdk/aws-ecs'
-import { Secret } from '@aws-cdk/aws-secretsmanager'
+import { CfnSecret, Secret } from '@aws-cdk/aws-secretsmanager'
+
+import { StringParameter } from '@aws-cdk/aws-ssm'
 
 type Props = sst.StackProps & {
   appName: string
@@ -44,15 +49,55 @@ export default class HasuraStack extends sst.Stack {
       }
     )
 
+    const username = 'postgres'
+    const databaseName = 'MdrxHasuraDb'
+
+    const securityGroup = SecurityGroup.fromSecurityGroupId(
+      this,
+      'SG',
+      props.vpc.vpcDefaultSecurityGroup
+    )
+
+    const myIp = '155.137.111.23/32'
+    securityGroup.addIngressRule(
+      Peer.ipv4(myIp),
+      Port.tcp(5432),
+      'allow 5432 access from my IP'
+    )
+
+    const dbCredentials = new Secret(this, 'DBCredentialsSecret', {
+      secretName: 'mdrx-db-credentials',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          username,
+        }),
+        excludePunctuation: true,
+        includeSpace: false,
+        generateStringKey: 'password',
+      },
+    })
+
+    new CfnOutput(this, 'Secret Name', { value: dbCredentials.secretName })
+    new CfnOutput(this, 'Secret ARN', { value: dbCredentials.secretArn })
+    new CfnOutput(this, 'Secret Full ARN', {
+      value: dbCredentials.secretFullArn || '',
+    })
+
+    new StringParameter(this, 'DbCredentialsArn', {
+      parameterName: 'prod-credentials-arn',
+      stringValue: dbCredentials.secretArn,
+    })
+
     const hasuraDatabase = new DatabaseInstance(this, 'HasuraDatabase', {
       instanceIdentifier: props.appName,
-      databaseName: 'MdrxHasuraDb',
-      engine: DatabaseInstanceEngine.POSTGRES,
+      databaseName: databaseName,
+      engine: DatabaseInstanceEngine.postgres({
+        version: PostgresEngineVersion.VER_10_4, //TODO: update engine if possible
+      }),
       instanceType: InstanceType.of(
         InstanceClass.BURSTABLE3,
         InstanceSize.MICRO
       ),
-      //masterUsername: 'syscdk', //can't add
       storageEncrypted: true,
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
@@ -61,31 +106,62 @@ export default class HasuraStack extends sst.Stack {
       vpcSubnets: {
         subnetType: SubnetType.PUBLIC,
       },
-      securityGroups: [],
       deletionProtection: false,
       multiAz: props.multiAz,
       removalPolicy: RemovalPolicy.DESTROY,
-    })
-    console.log('hotdog 1 end')
-
-    const hasuraUsername = 'hasura'
-    const hasuraUserSecret = new DatabaseSecret(this, 'HasuraDatabaseUser', {
-      username: hasuraUsername,
-      masterSecret: hasuraDatabase.secret,
+      credentials: Credentials.fromSecret(dbCredentials),
+      deleteAutomatedBackups: true,
+      securityGroups: [securityGroup],
     })
 
-    hasuraUserSecret.attach(hasuraDatabase) // Adds DB connections information in the secret
+    new CfnOutput(this, 'RDS Endpoint', {
+      value: hasuraDatabase.dbInstanceEndpointAddress,
+    })
 
-    const hasuraDatabaseUrlSecret = new Secret(
+    /*
+    const passwordSecret = Secret.fromSecretCompleteArn(
       this,
-      'HasuraDatabaseUrlSecret',
-      {
-        secretName: `${props.appName}-HasuradatabaseUrl`,
-      }
+      'db-password',
+      dbCredentials.secretFullArn
     )
+    */
 
-    const hasuraAdminSecret = new Secret(this, 'HasuraAdminSecret', {
-      secretName: 'HasuraAdminSecret',
+    const passStr = dbCredentials.secretValueFromJson('password').toString()
+    /*
+    const pass = ECSecret.fromSecretsManager(passwordSecret, 'password')
+    */
+
+    /*
+    const p = ECSecret.fromSecretsManager(passwordSecret)
+    */
+
+    /*
+    new CfnOutput(this, 'Secret Password', {
+      value: ECSecret.fromSecretsManager(dbCredentials),
+    })
+    */
+
+    // postgres://<username>:<password>@<hostname>:<port>/<database name>
+    // postgres connection string
+    const connectionString = `postgres://${username}:${passStr}@${hasuraDatabase.dbInstanceEndpointAddress}:${hasuraDatabase.dbInstanceEndpointPort}/${databaseName}`
+    //console.log('connection string', connectionString)
+
+    /*
+    new CfnOutput(this, 'postgres url', {
+      value: connectionString,
+    })
+    */
+
+    // save connection string as a secret
+    const connectionSecret = new CfnSecret(this, 'ConnectionSecret', {
+      secretString: connectionString,
+      description: 'Hasura RDS connection string',
+    })
+
+    const hasuraAdminSecret = new CfnSecret(this, 'HasuraAdminSecret', {
+      generateSecretString: {
+        excludePunctuation: true,
+      },
     })
 
     const fargate = new ApplicationLoadBalancedFargateService(
@@ -108,10 +184,15 @@ export default class HasuraStack extends sst.Stack {
           },
           secrets: {
             HASURA_GRAPHQL_DATABASE_URL: ECSecret.fromSecretsManager(
-              hasuraDatabaseUrlSecret
+              Secret.fromSecretArn(this, 'EcsSecret', connectionSecret.ref)
             ),
-            HASURA_GRAPHQL_ADMIN_SECRET:
-              ECSecret.fromSecretsManager(hasuraAdminSecret),
+            HASURA_GRAPHQL_ADMIN_SECRET: ECSecret.fromSecretsManager(
+              Secret.fromSecretArn(
+                this,
+                'EcsAdminSecret',
+                hasuraAdminSecret.ref
+              )
+            ),
           },
         },
         memoryLimitMiB: 512,
@@ -129,7 +210,6 @@ export default class HasuraStack extends sst.Stack {
       healthyHttpCodes: '200',
     })
 
-    console.log('hatdog 4')
     hasuraDatabase.connections.allowFrom(
       fargate.service,
       new Port({
@@ -139,14 +219,13 @@ export default class HasuraStack extends sst.Stack {
         toPort: 5432,
       })
     )
-    console.log('hatdog 4 end')
 
     this.addOutputs({
       hasuraSecret: hasuraDatabase.secret.secretValue.toString(),
-      HasuraDatabaseUserSecretArn: hasuraUserSecret.secretArn,
+      //HasuraDatabaseUserSecretArn: hasuraUserSecret.secretArn,
       HasuraDatabaseMasterSecretArn: hasuraDatabase.secret?.secretArn,
-      HasuraDatabaseUrlSecretArn: hasuraDatabaseUrlSecret.secretArn,
-      hasuraAdminSecret: hasuraAdminSecret.secretArn,
+      //HasuraDatabaseUrlSecretArn: hasuraDatabaseUrlSecret.secretArn,
+      //hasuraAdminSecret: hasuraAdminSecret.secretArn,
     })
   }
 }
