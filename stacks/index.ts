@@ -21,7 +21,7 @@ export default function main(app: sst.App): void {
     bucket: storageStack.bucket,
   })
 
-  new AuthApiStack(app, 'auth-api', {
+  const authApiStack = new AuthApiStack(app, 'auth-api', {
     auth: authStack.auth,
   })
 
@@ -40,5 +40,7 @@ export default function main(app: sst.App): void {
     certificates: certStack.certificates,
     vpc: vpcStack.vpc,
     multiAz: false,
+    authHookUrl: authApiStack.authHookUrl,
+    hasuraAdminSecret: process.env.HASURA_ADMIN_SECRET,
   })
 }

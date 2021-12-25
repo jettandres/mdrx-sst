@@ -32,6 +32,8 @@ type Props = sst.StackProps & {
   certificates: Certificates
   vpc: Vpc
   multiAz: boolean
+  authHookUrl: string
+  hasuraAdminSecret: string
 }
 
 export default class HasuraStack extends sst.Stack {
@@ -108,12 +110,6 @@ export default class HasuraStack extends sst.Stack {
       description: 'Hasura RDS connection string',
     })
 
-    const hasuraAdminSecret = new CfnSecret(this, 'HasuraAdminSecret', {
-      generateSecretString: {
-        excludePunctuation: true,
-      },
-    })
-
     const fargate = new ApplicationLoadBalancedFargateService(
       this,
       'HasuraFargateService',
@@ -127,10 +123,12 @@ export default class HasuraStack extends sst.Stack {
           containerPort: 8080,
           enableLogging: true,
           environment: {
-            // TODO: update envs with auth hooks
             HASURA_GRAPHQL_ENABLE_CONSOLE: 'true',
             HASURA_GRAPHQL_PG_CONNECTIONS: '100',
             HASURA_GRAPHQL_LOG_LEVEL: 'debug',
+            HASURA_GRAPHQL_ADMIN_SECRET: props.hasuraAdminSecret,
+            HASURA_GRAPHQL_AUTH_HOOK_MODE: 'GET',
+            HASURA_GRAPHQL_AUTH_HOOK: props.authHookUrl,
           },
           secrets: {
             HASURA_GRAPHQL_DATABASE_URL: ECSecret.fromSecretsManager(
@@ -138,13 +136,6 @@ export default class HasuraStack extends sst.Stack {
                 this,
                 'EcsSecret',
                 connectionSecret.ref
-              )
-            ),
-            HASURA_GRAPHQL_ADMIN_SECRET: ECSecret.fromSecretsManager(
-              Secret.fromSecretCompleteArn(
-                this,
-                'EcsAdminSecret',
-                hasuraAdminSecret.ref
               )
             ),
           },
@@ -173,5 +164,10 @@ export default class HasuraStack extends sst.Stack {
         toPort: 5432,
       })
     )
+
+    this.addOutputs({
+      PostgresUrl: connectionString,
+      HasuraAdminSecret: props.hasuraAdminSecret,
+    })
   }
 }

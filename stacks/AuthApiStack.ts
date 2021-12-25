@@ -6,6 +6,7 @@ type Props = sst.StackProps & {
 
 export default class AuthApiStack extends sst.Stack {
   api: sst.Api
+  authHookUrl: string
 
   constructor(scope: sst.App, id: string, props?: Props) {
     super(scope, id, props)
@@ -29,9 +30,11 @@ export default class AuthApiStack extends sst.Stack {
       },
     })
 
+    this.authHookUrl = `${this.api.url}/v1/verify-token`
+
     // Show the endpoint in the output
     this.addOutputs({
-      verifyToken: `GET ${this.api.url}/v1/verify-token`,
+      verifyToken: `GET ${this.authHookUrl}`,
     })
   }
 }
