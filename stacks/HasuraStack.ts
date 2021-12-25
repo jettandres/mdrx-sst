@@ -77,12 +77,6 @@ export default class HasuraStack extends sst.Stack {
       },
     })
 
-    new CfnOutput(this, 'Secret Name', { value: dbCredentials.secretName })
-    new CfnOutput(this, 'Secret ARN', { value: dbCredentials.secretArn })
-    new CfnOutput(this, 'Secret Full ARN', {
-      value: dbCredentials.secretFullArn || '',
-    })
-
     new StringParameter(this, 'DbCredentialsArn', {
       parameterName: 'prod-credentials-arn',
       stringValue: dbCredentials.secretArn,
@@ -118,39 +112,11 @@ export default class HasuraStack extends sst.Stack {
       value: hasuraDatabase.dbInstanceEndpointAddress,
     })
 
-    /*
-    const passwordSecret = Secret.fromSecretCompleteArn(
-      this,
-      'db-password',
-      dbCredentials.secretFullArn
-    )
-    */
-
     const passStr = dbCredentials.secretValueFromJson('password').toString()
-    /*
-    const pass = ECSecret.fromSecretsManager(passwordSecret, 'password')
-    */
-
-    /*
-    const p = ECSecret.fromSecretsManager(passwordSecret)
-    */
-
-    /*
-    new CfnOutput(this, 'Secret Password', {
-      value: ECSecret.fromSecretsManager(dbCredentials),
-    })
-    */
 
     // postgres://<username>:<password>@<hostname>:<port>/<database name>
     // postgres connection string
     const connectionString = `postgres://${username}:${passStr}@${hasuraDatabase.dbInstanceEndpointAddress}:${hasuraDatabase.dbInstanceEndpointPort}/${databaseName}`
-    //console.log('connection string', connectionString)
-
-    /*
-    new CfnOutput(this, 'postgres url', {
-      value: connectionString,
-    })
-    */
 
     // save connection string as a secret
     const connectionSecret = new CfnSecret(this, 'ConnectionSecret', {
@@ -184,10 +150,14 @@ export default class HasuraStack extends sst.Stack {
           },
           secrets: {
             HASURA_GRAPHQL_DATABASE_URL: ECSecret.fromSecretsManager(
-              Secret.fromSecretArn(this, 'EcsSecret', connectionSecret.ref)
+              Secret.fromSecretCompleteArn(
+                this,
+                'EcsSecret',
+                connectionSecret.ref
+              )
             ),
             HASURA_GRAPHQL_ADMIN_SECRET: ECSecret.fromSecretsManager(
-              Secret.fromSecretArn(
+              Secret.fromSecretCompleteArn(
                 this,
                 'EcsAdminSecret',
                 hasuraAdminSecret.ref
@@ -219,13 +189,5 @@ export default class HasuraStack extends sst.Stack {
         toPort: 5432,
       })
     )
-
-    this.addOutputs({
-      hasuraSecret: hasuraDatabase.secret.secretValue.toString(),
-      //HasuraDatabaseUserSecretArn: hasuraUserSecret.secretArn,
-      HasuraDatabaseMasterSecretArn: hasuraDatabase.secret?.secretArn,
-      //HasuraDatabaseUrlSecretArn: hasuraDatabaseUrlSecret.secretArn,
-      //hasuraAdminSecret: hasuraAdminSecret.secretArn,
-    })
   }
 }
