@@ -7,8 +7,6 @@ import {
   Port,
   Protocol,
   SubnetType,
-  SecurityGroup,
-  Peer,
 } from '@aws-cdk/aws-ec2'
 import { PublicHostedZone } from '@aws-cdk/aws-route53'
 import {
@@ -52,19 +50,6 @@ export default class HasuraStack extends sst.Stack {
     const username = 'postgres'
     const databaseName = 'MdrxHasuraDb'
 
-    const securityGroup = SecurityGroup.fromSecurityGroupId(
-      this,
-      'SG',
-      props.vpc.vpcDefaultSecurityGroup
-    )
-
-    const myIp = '155.137.111.23/32'
-    securityGroup.addIngressRule(
-      Peer.ipv4(myIp),
-      Port.tcp(5432),
-      'allow 5432 access from my IP'
-    )
-
     const dbCredentials = new Secret(this, 'DBCredentialsSecret', {
       secretName: 'mdrx-db-credentials',
       generateSecretString: {
@@ -105,7 +90,6 @@ export default class HasuraStack extends sst.Stack {
       removalPolicy: RemovalPolicy.DESTROY,
       credentials: Credentials.fromSecret(dbCredentials),
       deleteAutomatedBackups: true,
-      securityGroups: [securityGroup],
     })
 
     new CfnOutput(this, 'RDS Endpoint', {
