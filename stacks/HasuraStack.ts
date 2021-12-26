@@ -1,21 +1,13 @@
 import * as sst from '@serverless-stack/resources'
-import {
-  InstanceClass,
-  InstanceSize,
-  InstanceType,
-  Vpc,
-  Port,
-  Protocol,
-  SubnetType,
-} from '@aws-cdk/aws-ec2'
+import { Vpc, Port, Protocol, SubnetType } from '@aws-cdk/aws-ec2'
 import { PublicHostedZone } from '@aws-cdk/aws-route53'
 import {
   Credentials,
-  DatabaseInstance,
-  DatabaseInstanceEngine,
-  PostgresEngineVersion,
+  DatabaseClusterEngine,
+  ServerlessCluster,
+  ParameterGroup,
 } from '@aws-cdk/aws-rds'
-import { RemovalPolicy, CfnOutput } from '@aws-cdk/core'
+import { RemovalPolicy, CfnOutput, Duration } from '@aws-cdk/core'
 import { ApplicationLoadBalancedFargateService } from '@aws-cdk/aws-ecs-patterns'
 
 import { Certificates } from './CertificatesStack'
@@ -69,6 +61,35 @@ export default class HasuraStack extends sst.Stack {
       stringValue: dbCredentials.secretArn,
     })
 
+    const auroraDatabase = new ServerlessCluster(
+      this,
+      'AuroraServerlessCluster',
+      {
+        engine: DatabaseClusterEngine.AURORA_POSTGRESQL,
+        parameterGroup: ParameterGroup.fromParameterGroupName(
+          this,
+          'ParameterGroup',
+          'default.aurora-postgresql10'
+        ),
+        defaultDatabaseName: databaseName,
+        vpc: props.vpc,
+        vpcSubnets: {
+          subnetType: SubnetType.PUBLIC,
+        },
+        scaling: {
+          autoPause: Duration.minutes(15),
+        },
+        deletionProtection: false,
+        removalPolicy: RemovalPolicy.DESTROY,
+        credentials: Credentials.fromSecret(dbCredentials),
+      }
+    )
+
+    new CfnOutput(this, 'Aurora Serverless Endpoint', {
+      value: auroraDatabase.clusterEndpoint.socketAddress,
+    })
+
+    /*
     const hasuraDatabase = new DatabaseInstance(this, 'HasuraDatabase', {
       instanceIdentifier: props.appName,
       databaseName: databaseName,
@@ -97,12 +118,14 @@ export default class HasuraStack extends sst.Stack {
     new CfnOutput(this, 'RDS Endpoint', {
       value: hasuraDatabase.dbInstanceEndpointAddress,
     })
+    */
 
     const passStr = dbCredentials.secretValueFromJson('password').toString()
 
     // postgres://<username>:<password>@<hostname>:<port>/<database name>
     // postgres connection string
-    const connectionString = `postgres://${username}:${passStr}@${hasuraDatabase.dbInstanceEndpointAddress}:${hasuraDatabase.dbInstanceEndpointPort}/${databaseName}`
+    //const connectionString = `postgres://${username}:${passStr}@${hasuraDatabase.dbInstanceEndpointAddress}:${hasuraDatabase.dbInstanceEndpointPort}/${databaseName}`
+    const connectionString = `postgres://${username}:${passStr}@${auroraDatabase.clusterEndpoint.socketAddress}/${databaseName}`
 
     // save connection string as a secret
     const connectionSecret = new CfnSecret(this, 'ConnectionSecret', {
@@ -155,7 +178,7 @@ export default class HasuraStack extends sst.Stack {
       healthyHttpCodes: '200',
     })
 
-    hasuraDatabase.connections.allowFrom(
+    auroraDatabase.connections.allowFrom(
       fargate.service,
       new Port({
         protocol: Protocol.TCP,
