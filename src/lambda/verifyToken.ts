@@ -24,6 +24,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     const payload = await verifier.verify(token)
     const userId = payload?.sub as string
 
+    console.log('payload', payload)
+
     const {
       data: { employee },
     } = await client<QueryEmployeeDetailsResponse, QueryEmployeeDetailsPayload>(
