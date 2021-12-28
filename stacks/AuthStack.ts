@@ -28,6 +28,12 @@ export default class AuthStack extends sst.Stack {
         triggers: {
           postAuthentication: 'src/lambda/syncAuthUser.handler',
         },
+        userPoolClient: {
+          authFlows: {
+            userPassword: true,
+            userSrp: false,
+          },
+        },
       },
     })
 
