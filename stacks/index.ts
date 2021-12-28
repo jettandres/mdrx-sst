@@ -41,6 +41,6 @@ export default function main(app: sst.App): void {
     vpc: vpcStack.vpc,
     multiAz: false,
     authHookUrl: authApiStack.authHookUrl,
-    hasuraAdminSecret: process.env.HASURA_ADMIN_SECRET,
+    hasuraAdminSecret: process.env.HASURA_SECRET,
   })
 }
