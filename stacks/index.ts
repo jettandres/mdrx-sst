@@ -13,6 +13,8 @@ export default function main(app: sst.App): void {
     runtime: 'nodejs14.x',
   })
 
+  console.log('GQL Url', process.env.GRAPHQL_URL)
+
   const storageStack = new StorageStack(app, 'storage')
   const apiStack = new ApiStack(app, 'api', { bucket: storageStack.bucket })
 
