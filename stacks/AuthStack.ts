@@ -30,8 +30,7 @@ export default class AuthStack extends sst.Stack {
         },
         userPoolClient: {
           authFlows: {
-            userPassword: true,
-            userSrp: false,
+            userSrp: true,
           },
         },
       },
